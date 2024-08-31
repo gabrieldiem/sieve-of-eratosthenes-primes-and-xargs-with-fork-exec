@@ -12,36 +12,32 @@ static const int ERROR_CODE_PIPE = -1;
 static const int WRITE_SIDE = 1, READ_SIDE = 0;
 
 void
-write_all_numbers_to_initial_pipe(const int *max_number, int *initial_pipe)
+print_prime(const int *prime)
 {
-	int res = 0;
+	printf("primo %d\n", *prime);
+	fflush(stdout);
+}
 
-	for (int i = MINIMUM_NUMBER; i <= *max_number; i++) {
-		res = write(initial_pipe[WRITE_SIDE], &i, sizeof(int));
-		printf("write: %d\n", i);
-
-		if (res == 0) {
-			printf("Error during writing of numbers in pipe\n");
-			exit(EXIT_FAILURE);
-		}
+void
+wait_for_child()
+{
+	if (wait(NULL) < 0) {
+		printf("Error on wait\n");
+		exit(EXIT_FAILURE);
 	}
 }
 
 void
-print_prime(const int *prime)
-{
-	printf("primo %d\n", *prime);
-}
-
-void
-drop_multiples(int *left_pipe)
+drop_multiples(int *left_pipe_read_side)
 {
 	int prime = 0;
-	int res = read(left_pipe[READ_SIDE], &prime, sizeof(int));
+	int res = read(*left_pipe_read_side, &prime, sizeof(int));
+	printf("res: %d\n", res);
 	if (res < 0) {
 		printf("Error reading from pipe\n");
 		exit(EXIT_FAILURE);
 	} else if (res == 0) {
+		close(*left_pipe_read_side);
 		exit(EXIT_SUCCESS);
 	}
 
@@ -58,37 +54,46 @@ drop_multiples(int *left_pipe)
 		exit(EXIT_FAILURE);
 
 	} else if (child_id == 0) {
-		drop_multiples(right_pipe);
+		close(right_pipe[WRITE_SIDE]);
+		drop_multiples(&right_pipe[READ_SIDE]);
+		close(*left_pipe_read_side);
 
 	} else {
+		close(right_pipe[READ_SIDE]);
+		bool keep_reading = true;
+		while (keep_reading) {
+			int value = 0;
+			res = read(*left_pipe_read_side, &value, sizeof(int));
+			printf("res: %d\n", res);
+			if (res < 0) {
+				printf("Error reading from pipe\n");
+				exit(EXIT_FAILURE);
+			} else if (res == 0) {
+				keep_reading = false;
+				break;
+			}
+
+
+			if (value % prime == 0) {
+				// do nothing
+			} else {
+				res = write(right_pipe[WRITE_SIDE],
+				            &value,
+				            sizeof(int));
+
+				if (res == 0) {
+					printf("Error during writing of "
+					       "numbers in right pipe\n");
+					exit(EXIT_FAILURE);
+				}
+			}
+		}
+		close(right_pipe[WRITE_SIDE]);
+		close(*left_pipe_read_side);
 		wait_for_child();
 	}
-
-	while (true) {
-		int value = 0;
-		res = read(left_pipe[READ_SIDE], &value, sizeof(int));
-		if (res < 0) {
-			printf("Error reading from pipe\n");
-			exit(EXIT_FAILURE);
-		} else if (res == 0) {
-			exit(EXIT_SUCCESS);
-		}
-
-		if (value % prime == 0) {
-			// do nothing
-		} else {
-		}
-	}
 }
 
-void
-wait_for_child()
-{
-	if (wait(NULL) < 0) {
-		printf("Error on wait\n");
-		exit(EXIT_FAILURE);
-	}
-}
 
 int
 main(int argc, char *argv[])
@@ -113,18 +118,31 @@ main(int argc, char *argv[])
 		exit(EXIT_FAILURE);
 	}
 
-	write_all_numbers_to_initial_pipe(&max_number, initial_pipe);
-	close(initial_pipe[WRITE_SIDE]);
-
 	pid_t child_id = fork();
 	if (child_id < 0) {
 		printf("Error while forking\n");
 		exit(EXIT_FAILURE);
 
 	} else if (child_id == 0) {
+		close(initial_pipe[WRITE_SIDE]);
 		drop_multiples(initial_pipe);
 
 	} else {
+		close(initial_pipe[READ_SIDE]);
+		int res = 0;
+
+		for (int i = MINIMUM_NUMBER; i <= max_number; i++) {
+			res = write(initial_pipe[WRITE_SIDE], &i, sizeof(int));
+			printf("write: %d\n", i);
+
+			if (res == 0) {
+				printf("Error during writing of numbers in "
+				       "pipe\n");
+				exit(EXIT_FAILURE);
+			}
+		}
+		close(initial_pipe[WRITE_SIDE]);
+
 		wait_for_child();
 	}
 
@@ -139,7 +157,5 @@ main(int argc, char *argv[])
 
 	        printf("read: %d\n", numread);
 	}*/
-
-	close(initial_pipe[READ_SIDE]);
 	exit(EXIT_SUCCESS);
 }
