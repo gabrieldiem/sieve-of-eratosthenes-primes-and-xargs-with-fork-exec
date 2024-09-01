@@ -75,7 +75,11 @@ wait_for_child()
 }
 
 /*
- *
+ * Reads an assumed prime int from FD left_pipe_read_side, if the read fails it
+ * exits the current process, it EOF is reached the function returns.
+ * After reading it prints the prime and forks the process, the child calls this
+ * function recursively with a new right side pipe as the argument, while the
+ * current process writes to that pipe the non multiples of the prime read
  */
 void
 drop_multiples(const int left_pipe_read_side)
