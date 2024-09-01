@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+
 #define PIPE_SIZE_VECTOR 2
 
 static const int MINIMUM_INPUT_PARAMS = 1;
@@ -11,6 +12,9 @@ static const int MINIMUM_NUMBER = 2;
 static const int ERROR_CODE_PIPE = -1;
 static const int READ_SIDE = 0, WRITE_SIDE = 1;
 
+/*
+ * Prints the number with a specific format and flushes stdout
+ */
 void
 print_prime(const int prime)
 {
@@ -19,15 +23,12 @@ print_prime(const int prime)
 	return;
 }
 
-void
-wait_for_child()
-{
-	if (wait(NULL) < 0) {
-		printf("Error on wait\n");
-		exit(EXIT_FAILURE);
-	}
-}
-
+/*
+ * Reads in a loop ints from FD left_pipe_read_side and if it is not a multiple of
+ * prime it writes it to the FD right_pipe_write_side
+ * If the EOF from left_pipe_read_side is reached it breaks the cycle
+ * If the write fails it exits the current process
+ */
 void
 write_to_pipe_non_multiples_of_prime(const int left_pipe_read_side,
                                      const int right_pipe_write_side,
@@ -60,6 +61,22 @@ write_to_pipe_non_multiples_of_prime(const int left_pipe_read_side,
 	}
 }
 
+/*
+ * Waits for a child process of the current process to exit. If wait fails it
+ * exits the current process
+ */
+void
+wait_for_child()
+{
+	if (wait(NULL) < 0) {
+		printf("Error on wait\n");
+		exit(EXIT_FAILURE);
+	}
+}
+
+/*
+ *
+ */
 void
 drop_multiples(const int left_pipe_read_side)
 {
@@ -105,6 +122,11 @@ drop_multiples(const int left_pipe_read_side)
 	}
 }
 
+/*
+ * Writes the continuous sequence of numbers from MINIMUM_NUMBER upto and
+ * including max_number to FD pipe_read_side
+ * If the write fails it exits the current process
+ */
 void
 write_numbers_in_initial_pipe(const int pipe_read_side, const int max_number)
 {
