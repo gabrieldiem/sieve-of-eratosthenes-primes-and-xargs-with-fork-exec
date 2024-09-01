@@ -5,3 +5,4 @@ primes
 xargs
 .vscode
 .fuse_hidden*
+tests/__pycache__
