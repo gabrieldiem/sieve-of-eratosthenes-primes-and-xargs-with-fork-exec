@@ -1,5 +1,5 @@
 #include <stdio.h>
-#include <stdbool.h>
+#include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -7,6 +7,7 @@
 
 #ifndef NARGS
 #define NARGS 4
+#define NARGS_WITH_AUX_PARAMS (NARGS + 2)
 #endif
 
 static const int MINIMUM_INPUT_PARAMS = 1;
@@ -16,23 +17,45 @@ move_line_to_input_buffer(char *input_buffer[NARGS],
                           size_t *input_buff_size,
                           char **new_line)
 {
+	/* Remove the line break added by stdin */
+	char *line_break_ptr = strchr(*new_line, '\n');
+	if (line_break_ptr != NULL) {
+		*line_break_ptr = '\0';
+	}
+
 	input_buffer[*input_buff_size] = *new_line;
 	*new_line = NULL;
 	*input_buff_size += 1;
 }
 
 void
-run_command(char *cmds[],
-            int cmds_size,
-            char *input_buffer[NARGS],
-            size_t input_buff_size)
+run_command(char *cmd, char *input_buffer[NARGS], size_t input_buff_size)
 {
-	for (int i = 1; i < cmds_size; i++) {
-		printf("cmd: %s\n", cmds[i]);
-	}
+	char *exec_argv[NARGS_WITH_AUX_PARAMS] = { NULL };
+	exec_argv[0] = cmd;
 
 	for (size_t i = 0; i < input_buff_size; i++) {
-		printf("input: %s\n", input_buffer[i]);
+		exec_argv[i + 1] = input_buffer[i];
+	}
+
+	pid_t child_id = fork();
+
+	if (child_id < 0) {
+		printf("Error while forking\n");
+		exit(EXIT_FAILURE);
+
+	} else if (child_id == 0) /* process is child */ {
+		execvp(cmd, exec_argv);
+
+		/* If this line is reached execvp failed and returned */
+		printf("Error from execvp\n");
+		exit(EXIT_FAILURE);
+
+	} else /* if process is parent */ {
+		if (wait(NULL) < 0) {
+			printf("Error on wait\n");
+			exit(EXIT_FAILURE);
+		}
 	}
 }
 
@@ -55,6 +78,7 @@ main(int argc, char *argv[])
 		       argv[0]);
 		exit(EXIT_FAILURE);
 	}
+	char *cmd = argv[1];
 
 	char *input_buffer[NARGS] = { NULL };
 	size_t input_buff_size = 0;
@@ -66,17 +90,16 @@ main(int argc, char *argv[])
 		move_line_to_input_buffer(input_buffer, &input_buff_size, &new_line);
 
 		if (input_buff_size == NARGS) {
-			run_command(argv, argc, input_buffer, input_buff_size);
+			run_command(cmd, input_buffer, input_buff_size);
 			clear_input_buffer(input_buffer, &input_buff_size);
 		}
 	}
 
-	free(new_line);
-
 	if (input_buff_size != 0) {
-		run_command(argv, argc, input_buffer, input_buff_size);
+		run_command(cmd, input_buffer, input_buff_size);
 		clear_input_buffer(input_buffer, &input_buff_size);
 	}
 
+	free(new_line);
 	exit(EXIT_SUCCESS);
 }
