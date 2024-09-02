@@ -11,16 +11,22 @@
 #endif
 
 static const int MINIMUM_INPUT_PARAMS = 1;
+static const char LINE_BREAK = '\n', STRING_NULL_TERMINATOR = '\0';
 
+/*
+ * Given a non-full input_buffer vector, the function moves the "ownership" and
+ * the content of the new_line allocated memory to the next available position of input_buffer.
+ * new_line has the line break removed and when the function returns it is nulled
+ */
 void
 move_line_to_input_buffer(char *input_buffer[NARGS],
                           size_t *input_buff_size,
                           char **new_line)
 {
 	/* Remove the line break added by stdin */
-	char *line_break_ptr = strchr(*new_line, '\n');
+	char *line_break_ptr = strchr(*new_line, LINE_BREAK);
 	if (line_break_ptr != NULL) {
-		*line_break_ptr = '\0';
+		*line_break_ptr = STRING_NULL_TERMINATOR;
 	}
 
 	input_buffer[*input_buff_size] = *new_line;
@@ -28,6 +34,11 @@ move_line_to_input_buffer(char *input_buffer[NARGS],
 	*input_buff_size += 1;
 }
 
+/*
+ * Forks the current process and lets the child process run with exec the
+ * desired command with the given non-null arguments from input_buffer. The
+ * parent process will wait for the child to finish execution
+ */
 void
 run_command(char *cmd, char *input_buffer[NARGS], size_t input_buff_size)
 {
@@ -47,7 +58,7 @@ run_command(char *cmd, char *input_buffer[NARGS], size_t input_buff_size)
 	} else if (child_id == 0) /* process is child */ {
 		execvp(cmd, exec_argv);
 
-		/* If this line is reached execvp failed and returned */
+		/* If this line is reached execvp returned, meaning that it failed */
 		printf("Error from execvp\n");
 		exit(EXIT_FAILURE);
 
@@ -59,6 +70,9 @@ run_command(char *cmd, char *input_buffer[NARGS], size_t input_buff_size)
 	}
 }
 
+/*
+ * Frees and then nulls each position of the input_buffer vector and resets to 0 input_buff_size
+ */
 void
 clear_input_buffer(char *input_buffer[NARGS], size_t *input_buff_size)
 {
@@ -73,8 +87,7 @@ int
 main(int argc, char *argv[])
 {
 	if (argc != MINIMUM_INPUT_PARAMS + 1) {
-		printf("Error while calling program. Expected %s [command "
-		       "[initial-arguments]]",
+		printf("Error while calling program. Expected %s <command>",
 		       argv[0]);
 		exit(EXIT_FAILURE);
 	}
