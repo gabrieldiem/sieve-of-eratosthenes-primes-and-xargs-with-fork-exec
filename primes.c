@@ -42,7 +42,7 @@ write_to_pipe_non_multiples_of_prime(const int left_pipe_read_side,
 		res = read(left_pipe_read_side, &value, sizeof(int));
 
 		if (res < 0) {
-			printf("Error while reading from pipe\n");
+			perror("Error while reading from pipe\n");
 			exit(EXIT_FAILURE);
 		} else if (res == 0) /* final read */ {
 			keep_reading = false;
@@ -53,7 +53,7 @@ write_to_pipe_non_multiples_of_prime(const int left_pipe_read_side,
 			res = write(right_pipe_write_side, &value, sizeof(int));
 
 			if (res == 0) {
-				printf("Error during writing of "
+				perror("Error during writing of "
 				       "numbers in right pipe\n");
 				exit(EXIT_FAILURE);
 			}
@@ -69,7 +69,7 @@ void
 wait_for_child()
 {
 	if (wait(NULL) < 0) {
-		printf("Error on wait\n");
+		perror("Error on wait\n");
 		exit(EXIT_FAILURE);
 	}
 }
@@ -90,7 +90,7 @@ drop_multiples(const int left_pipe_read_side)
 	int res = read(left_pipe_read_side, &prime, sizeof(int));
 
 	if (res < 0) {
-		printf("Error while reading from pipe\n");
+		perror("Error while reading from pipe\n");
 		exit(EXIT_FAILURE);
 
 	} else if (res == 0) /* final read */ {
@@ -108,7 +108,7 @@ drop_multiples(const int left_pipe_read_side)
 	pid_t child_id = fork();
 
 	if (child_id < 0) {
-		printf("Error while forking\n");
+		perror("Error while forking\n");
 		exit(EXIT_FAILURE);
 
 	} else if (child_id == 0) /* process is child */ {
@@ -140,7 +140,7 @@ write_numbers_in_initial_pipe(const int pipe_read_side, const int max_number)
 		res = write(pipe_read_side, &i, sizeof(int));
 
 		if (res == 0) {
-			printf("Error during writing of numbers in initial "
+			perror("Error during writing of numbers in initial "
 			       "pipe\n");
 			exit(EXIT_FAILURE);
 		}
@@ -174,7 +174,7 @@ main(int argc, char *argv[])
 	pid_t child_id = fork();
 
 	if (child_id < 0) {
-		printf("Error while forking\n");
+		perror("Error while forking\n");
 		exit(EXIT_FAILURE);
 
 	} else if (child_id == 0) /* process is child */ {

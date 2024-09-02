@@ -52,19 +52,19 @@ run_command(char *cmd, char *input_buffer[NARGS], size_t input_buff_size)
 	pid_t child_id = fork();
 
 	if (child_id < 0) {
-		printf("Error while forking\n");
+		perror("Error while forking\n");
 		exit(EXIT_FAILURE);
 
 	} else if (child_id == 0) /* process is child */ {
 		execvp(cmd, exec_argv);
 
 		/* If this line is reached execvp returned, meaning that it failed */
-		printf("Error from execvp\n");
+		perror("Error from execvp\n");
 		exit(EXIT_FAILURE);
 
 	} else /* if process is parent */ {
 		if (wait(NULL) < 0) {
-			printf("Error on wait\n");
+			perror("Error on wait\n");
 			exit(EXIT_FAILURE);
 		}
 	}
